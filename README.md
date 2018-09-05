@@ -2,15 +2,15 @@
 
 ## Installation
 
-Запуск контейнера командой: `docker-compose up -d`
+Launch container by this command: `docker-compose up -d`
 
-Пересоздать(rebuild) контейнер (при изменении csv файла): `docker-compose up -d --build`
+Rebuild container (upon changing csv file): `docker-compose up -d --build`
 
 ## Usage
 
-Запуск скрапера командой: `docker exec jobparser_scrapy01 sh -c "scrapy crawl indeed"` или более простой запуск файла `./run_spider.sh` (для Windows: `sh run_spider.sh`) 
+Launch scrapper by this command: `docker exec jobparser_scrapy01 sh -c "scrapy crawl indeed"` or simplier file launch `./run_spider.sh` (for Windows: `sh run_spider.sh`) 
 
-## Данные для доступа в базу
+## Data to get access to the database
 ```
 host -  'db'
 port - '5432'
