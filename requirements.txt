@@ -1,0 +1,5 @@
+Scrapy==1.5.1
+celery==4.2.1
+redis==2.10.6
+SQLAlchemy==1.2.11
+psycopg2==2.7.5

@@ -1,0 +1,40 @@
+version: '2'
+services:
+  web:
+    build: .
+    container_name: jobparser_scrapy01
+    command: bash -c "tail -f /dev/null"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+
+  celery:
+    build: .
+    container_name: jobparser_celery01
+    command: celery worker --app=tasks
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+      - web
+  db:
+    image: postgres:latest
+    container_name: jobparser_db01
+    volumes:
+    - ./runtime/postgres:/var/lib/postgresql/data:Z
+    ports:
+    - "5435:5432"
+    environment:
+    - POSTGRES_PASSWORD=qwerty
+    - POSTGRES_DB=jobs
+
+  redis:
+    image: redis
+    container_name: jobparser_redis01
+    ports:
+    - "6382:6379"
+    volumes:
+    - ./runtime/redis:/data:Z

@@ -1,0 +1,1 @@
+docker exec jobparser_scrapy01 sh -c "scrapy crawl indeed"
