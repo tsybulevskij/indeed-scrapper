@@ -102,7 +102,7 @@ DATABASE = {
     'database': 'jobs'
 }
 
-BROKER_URL = "redis://redis/0"
+BROKER_URL = "redis://localhost:6379/0"
 try:
     from .settings_local import *
 except ImportError as e:
