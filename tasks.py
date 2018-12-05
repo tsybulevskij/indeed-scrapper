@@ -1,12 +1,11 @@
 from celery import Celery
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import IntegrityError
 
 from models import db_connect, JobInfo, create_table
+from job_scrapy.settings import BROKER_URL, CELERY_RESULT_BACKEND
 
-from job_scrapy.settings import BROKER_URL
+app = Celery('tasks', broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
 
-app = Celery('tasks', broker=BROKER_URL)
 
 @app.task
 def insert_item(item):
@@ -14,13 +13,15 @@ def insert_item(item):
     create_table(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
+
     for data in item:
         job = JobInfo(**data)
-        try:
+        exist_post_url = session.query(JobInfo).filter(JobInfo.post_url == data['post_url']).all()
+        exist_original_url = session.query(JobInfo).filter(JobInfo.original_url == data['original_url']).all()
+        if not (exist_original_url and exist_post_url):
             session.add(job)
             session.commit()
-        except IntegrityError:
-            session.rollback()
+        else:
             query = session.query(JobInfo).filter(JobInfo.post_url == data['post_url'])
             for instance in query:
                 if instance.filter_salary is not None:
@@ -33,5 +34,4 @@ def insert_item(item):
                             synchronize_session='fetch'
                         )
                         session.commit()
-        finally:
-            session.close()
+    session.close()

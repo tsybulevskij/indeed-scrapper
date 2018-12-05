@@ -17,11 +17,11 @@ class JobScrapyPipeline(object):
 
     def process_item(self, item, spider):
         self.items.append(item._values)
-        if len(self.items) >= 50:
+        if len(self.items) >= 2000:
             insert_item.delay(item=self.items)
         return item
 
-    def spider_closed(self, spider):
+    def close_spider(self, spider):
         if self.items:
             insert_item.delay(item=self.items)
 

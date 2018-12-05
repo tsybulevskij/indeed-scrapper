@@ -34,3 +34,5 @@ class JobInfo(DeclarativeBase):
     period = Column('period', VARCHAR(10))
     filter_salary = Column('filter_salary', Text)
     sponsored = Column('sponsored', Text)
+    start_url = Column('start_url', Text)
+    page_order = Column('page_order', Integer)

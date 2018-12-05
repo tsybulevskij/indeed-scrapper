@@ -102,7 +102,11 @@ DATABASE = {
     'database': 'jobs'
 }
 
-BROKER_URL = "redis://localhost:6379/0"
+REDIS_HOST = 'localhost'
+REDIS_PORT = '6379'
+BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT
+CELERY_RESULT_BACKEND = 'redis://' + REDIS_HOST + ':' + REDIS_PORT
+
 try:
     from .settings_local import *
 except ImportError as e:

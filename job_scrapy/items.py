@@ -17,3 +17,5 @@ class JobScrapyItem(scrapy.Item):
     period = scrapy.Field()
     filter_salary = scrapy.Field()
     sponsored = scrapy.Field()
+    start_url = scrapy.Field()
+    page_order = scrapy.Field()

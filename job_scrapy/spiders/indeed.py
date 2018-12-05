@@ -20,10 +20,19 @@ class IndeedSpider(scrapy.Spider):
                     ''.join(url)
                     for url in urls
                 ]
+                order_number_on_page = 0
                 for url in start_urls:
                     result = urlparse(url)
                     if result.scheme and result.netloc:
-                        yield scrapy.Request(url, dont_filter=True)
+                        yield scrapy.Request(
+                            url,
+                            dont_filter=True,
+                            meta={
+                                'start_url': url,
+                                'order_number_on_page': order_number_on_page
+                            },
+                            callback=self.parse
+                        )
         except FileNotFoundError:
             self.log('File not found')
 
@@ -31,20 +40,33 @@ class IndeedSpider(scrapy.Spider):
         url_posts = response.xpath(
             '//td[@id="resultsCol"]//h2[@class="jobtitle"]/a/@href'
         ).extract()
-
-        sponsored = self.parse_sponsored(response)
-
+        sponsored_posts = self.parse_sponsored(response)
         filter_salary = self.parse_filter_salary(response)
+        page_order = self.parse_order(response)
+        start_url = response.meta.get('start_url')
 
-        for url in url_posts:
+        for url in sponsored_posts:
             yield scrapy.Request(
                 'https://www.indeed.com' + url,
                 callback=self.parse_original_url,
                 meta={
                     'filter_salary': filter_salary,
-                    'sponsored': sponsored
+                    'sponsored': 'sponsored'
                 },
                 dont_filter=True
+            )
+
+        for url in url_posts:
+            yield scrapy.Request(
+                'https://www.indeed.com' + url,
+                callback=self.parse_original_url,
+                dont_filter=True,
+                meta={
+                    'filter_salary': filter_salary,
+                    'start_url': start_url,
+                    'page_order': page_order,
+                    'sponsored': None
+                }
             )
 
         next_url = response.xpath(
@@ -53,7 +75,14 @@ class IndeedSpider(scrapy.Spider):
 
         if next_url is not None:
             next_page = 'https://www.indeed.com' + next_url
-            yield response.follow(next_page, callback=self.parse, dont_filter=True)
+            yield response.follow(
+                next_page,
+                callback=self.parse,
+                dont_filter=True,
+                meta={
+                    'start_url': start_url
+                }
+            )
 
         salary_filter_urls = response.xpath(
             '//div[@id="SALARY_rbo"]//a/@href'
@@ -61,7 +90,14 @@ class IndeedSpider(scrapy.Spider):
 
         if salary_filter_urls:
             for filter_url in salary_filter_urls:
-                yield response.follow(filter_url, callback=self.parse, dont_filter=True)
+                yield response.follow(
+                    filter_url,
+                    callback=self.parse,
+                    dont_filter=True,
+                    meta={
+                        'start_url': start_url
+                    }
+                )
 
     def parse_original_url(self, response):
         item = JobScrapyItem()
@@ -80,6 +116,8 @@ class IndeedSpider(scrapy.Spider):
         item['period'] = self.parse_period(response)
         item['filter_salary'] = response.meta.get('filter_salary')
         item['sponsored'] = response.meta.get('sponsored')
+        item['start_url'] = response.meta.get('start_url')
+        item['page_order'] = response.meta.get('page_order')
 
         original_url = response.xpath(
             '//span[@id="originalJobLinkContainer"]/a/@href'
@@ -132,7 +170,6 @@ class IndeedSpider(scrapy.Spider):
             if zip != '':
                 return zip
 
-
     def parse_description(self, response):
         data = response.xpath(
             '//div[contains(@class, "JobComponent-description")]//text()'
@@ -161,27 +198,29 @@ class IndeedSpider(scrapy.Spider):
         data = response.xpath(
             '//div[contains(@class, "JobMetadataHeader-item")]/text()'
         ).extract()
-        salary = ''.join(data)
-        salary = salary.replace(',', '.')
-        float_salary = re.search(r'\d+.\d+', salary)
-        int_salary = re.search(r'\d+', salary)
-        if float_salary:
-            return float_salary.group()
-        elif int_salary:
-            return int_salary.group()
+        if data:
+            salary = ''.join(data)
+            salary = salary.replace(',', '.')
+            float_salary = re.search(r'\d+.\d+', salary)
+            int_salary = re.search(r'\d+', salary)
+            if float_salary:
+                return float_salary.group()
+            elif int_salary:
+                return int_salary.group()
 
     def parse_max_salary(self, response):
         data = response.xpath(
             '//div[contains(@class, "JobMetadataHeader-item")]/text()'
         ).extract()
-        salary = ''.join(data)
-        salary = salary.replace(',', '.')
-        float_salary = re.findall(r'\d+.\d+', salary)
-        int_salary = re.findall(r'\d+', salary)
-        if float_salary:
-            return float_salary[-1]
-        elif int_salary:
-            return int_salary[-1]
+        if data:
+            salary = ''.join(data)
+            salary = salary.replace(',', '.')
+            float_salary = re.findall(r'\d+.\d+', salary)
+            int_salary = re.findall(r'\d+', salary)
+            if float_salary:
+                return float_salary[-1]
+            elif int_salary:
+                return int_salary[-1]
 
     def parse_text_html(self, response):
         return response.xpath(
@@ -213,6 +252,12 @@ class IndeedSpider(scrapy.Spider):
             return str(float_salary.group())
 
     def parse_sponsored(self, response):
-        return response.xpath(
-            '//td[@id="resultsCol"]//span[contains(@class, "sponsored")]/text()'
-        ).extract_first()
+        sponsored = response.xpath(
+            '//span[contains(@class, "sponsoredGray")]/ancestor::div[@class="sjCapt"]/ancestor::div/a[@class="jobtitle turnstileLink"]/@href'
+        ).extract()
+        return sponsored
+
+    def parse_order(self, response):
+        data = response.xpath('//div[@class="pagination"]/b/text()').extract_first()
+        if data:
+            return int(data)
