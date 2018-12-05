@@ -51,6 +51,8 @@ class IndeedSpider(scrapy.Spider):
                 callback=self.parse_original_url,
                 meta={
                     'filter_salary': filter_salary,
+                    'start_url': start_url,
+                    'page_order': page_order,
                     'sponsored': 'sponsored'
                 },
                 dont_filter=True
